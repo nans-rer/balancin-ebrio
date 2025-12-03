@@ -11,16 +11,18 @@ int motorPinR1 = 11; // Pin direccion motor derecho 1
 int motorPinR2 = 10; // Pin direccion motor derecho 2
 int motorPinRENA = 9; // Pin direccion motor derecho
 
+int ledPin = 6; // Pin LED
+
 int ax, ay, az; // Valores sin procesar del acelerometro en x, y, z
 
 float roll = 0, pitch = 0;
 
 // Parametro PID
-float Ku=13;
-float Kp = 14;
-float Ki = 0;
-float Kd = 1.25;
-float setpoint = 0;   // ° deseados
+//float Ku=13;
+float Kp = 11;
+float Ki = 0.02;
+float Kd = 0.5;
+float setpoint = -2.5;   // ° deseados
 
 // Variables de control
 
@@ -54,13 +56,15 @@ void setup() {
   pinMode(motorPinR1, OUTPUT); 
   pinMode(motorPinR2, OUTPUT);
   pinMode(motorPinRENA, OUTPUT);
+
+  pinMode(ledPin, OUTPUT);
 }
 
 void motorForward(int motorSpeed, float error) {
   // Limitamos motorSpeed al rango válido
   motorSpeed = constrain(motorSpeed, 0, 255);
   
-  if (error < -5) {
+  if (error < -6.5) {
     // Motor izquierdo hacia adelante
     digitalWrite(motorPinL1, HIGH);
     digitalWrite(motorPinL2, LOW);
@@ -68,8 +72,10 @@ void motorForward(int motorSpeed, float error) {
     // Motor derecho hacia atrás
     digitalWrite(motorPinR1, LOW);
     digitalWrite(motorPinR2, HIGH);
+
+    digitalWrite(ledPin, LOW);
   }
-  else if (error > 5) {
+  else if (error > 2.5) {
     // Motor izquierdo hacia atrás
     digitalWrite(motorPinL1, LOW);
     digitalWrite(motorPinL2, HIGH);
@@ -77,6 +83,8 @@ void motorForward(int motorSpeed, float error) {
     // Motor derecho hacia adelante
     digitalWrite(motorPinR1, HIGH);
     digitalWrite(motorPinR2, LOW);
+
+    digitalWrite(ledPin, LOW);
   }
   else {
     // En equilibrio, detenerse
@@ -84,6 +92,8 @@ void motorForward(int motorSpeed, float error) {
     digitalWrite(motorPinL2, LOW);
     digitalWrite(motorPinR1, LOW);
     digitalWrite(motorPinR2, LOW);
+
+    digitalWrite(ledPin, HIGH);
   }
 
   // Aplicamos la velocidad PWM a ambos motores
@@ -170,15 +180,15 @@ void loop() {
     derivada = (error - error_prev) / dt;
     float D = Kd * derivada;
 
-    salida = P + I + D;
+    salida = abs(P + I + D);
 
 
     // 4) Saturación y anti–windup
     if (salida > 180) {
       salida = 180;
       integral -= error * dt; // Evita acumulación excesiva
-    } else if (salida < 130) {
-      salida = 130;
+    } else if (salida < 40) {
+      salida = 40;
       integral -= error * dt;
     }
     // Otra opción
@@ -203,7 +213,9 @@ void loop() {
     Serial.print("Error:\t");
     Serial.print(error); Serial.print("\t");
     Serial.print("Pitch:\t");
-    Serial.println(pitch);
+    Serial.print(pitch); Serial.print("\t");
+    Serial.print("Salida:\t");
+    Serial.println(salida);
 
     // 7) Guardar error anterior
     error_prev = error;
